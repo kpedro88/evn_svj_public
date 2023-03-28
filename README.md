@@ -25,16 +25,16 @@ The generation of QCD background events uses the settings in [flat_QCD.txt](./ge
 
 ## Running
 
-The options for all scripts can be viewed by invoking `python [script]/py --help`.
+The options for all scripts can be viewed by invoking `python [script].py --help`.
 
-`train.py` trains the composite network.
+[`train.py`](./train.py) trains the composite network.
 
-`test.py` produces the 2D correlation plots and computes calibrations.
+[`test.py`](./test.py) produces the 2D correlation plots and computes calibrations.
 
-`analyze.py` produces the 1D distribution plots.
+[`analyze.py`](./analyze.py) produces the 1D distribution plots.
 
-`plot_loss.py` plots losses from training.
+[`plot_loss.py`](./plot_loss.py) plots losses from training.
 
-`bumphunt.py` produces the signal and background histograms for sensitivity studies.
+[`bumphunt.py`](./bumphunt.py) produces the signal and background histograms for sensitivity studies.
 
-`plotter.py` and the various scripts that invoke it produce plots from serialized histograms from other scripts (`analyze.py`, `bumphunt.py`).
+[`plotter.py`](./plotter.py) and the various scripts that invoke it produce plots from serialized histograms from other scripts ([`analyze.py`](./analyze.py), [`bumphunt.py`](./bumphunt.py)).
