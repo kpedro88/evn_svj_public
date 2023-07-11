@@ -46,6 +46,7 @@ for var in vars:
         numer = components[1][0][svname]["counts"]
         denom = np.sqrt(components[0][0]["QCD_{}".format(var)]["counts"])
         components[1][0][svname]["counts"] = np.divide(numer, denom, out=np.zeros_like(numer), where=denom!=0)
+        print("{} ({}): {:.4g}".format(var,sig,np.sqrt(np.sum(components[1][0][svname]["counts"]**2))))
 
         if var=="AEV": continue
         components[2][0][svname] = deepcopy(components[0][0][svname])
