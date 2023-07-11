@@ -87,10 +87,10 @@ def get_axis_info(axes, names, values, pranges=None):
         axis_info[name]["vals"] = np.squeeze(value)
     return axis_info
 
-def do_calibrate(name, axis, axis_params, calibrations):
+def do_calibrate(name, axis, axis_params, calibrations, calib_offset):
     x = axis
     y = axis_params
-    coeff, fit, _ = calibrate(axis, axis_params)
+    coeff, fit, _ = calibrate(axis, axis_params, zero=not calib_offset)
     calibrations[name] = coeff
     axis["fit"] = fit
 
@@ -112,6 +112,7 @@ def test():
     parser.add_argument("--inputs-multi", type=str, default=[], nargs='*', action="append", help="input feature name(s) to compare different models (call once per model) (only if different from --inputs)")
     parser.add_argument("--flip", type=int, default=[], nargs='*', help="manually flip specified AEVs")
     parser.add_argument("--logz", default=False, action="store_true", help="logarithmic z axis (color scale)")
+    parser.add_argument("--calib-offset", default=False, action="store_true", help="include offset in calibration")
     args = eparser.parse_args(checker=check_test_args)
     outf_test = args.outf+"/"+args.name
     os.makedirs(outf_test, exist_ok=True)
@@ -165,7 +166,7 @@ def test():
     # theory vars get calibrated against param
     if args.calibrate:
         for name, axis in axis_theory.items():
-            do_calibrate(name, axis, axis_params, calibrations)
+            do_calibrate(name, axis, axis_params, calibrations, args.calib_offset)
 
     n_artvars = artvars.shape[1]
     artname = "AEV"
@@ -187,7 +188,7 @@ def test():
 
         # AEV(s) get calibrated against param
         if args.calibrate:
-            do_calibrate(artname, axis_artvar, axis_params, calibrations)
+            do_calibrate(artname, axis_artvar, axis_params, calibrations, args.calib_offset)
             # include flip in coeff for later use
             if flip: calibrations[artname][-1] *= -1
 
