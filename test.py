@@ -60,6 +60,7 @@ def heatmap(hists, name, folder, calibrations=None, logz=False, verbose=False, w
                 if verbose: print("WARNING: cannot display calibration fit for {}, {}".format(x["name"], y["name"]))
                 continue
 
+            coeff[0] = abs(coeff[0])
             if len(coeff)==1:
                 coefflabels = ["m"]
                 fitlabel = fitlabel.replace("+b)",")")
