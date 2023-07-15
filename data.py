@@ -83,6 +83,13 @@ class EventData:
         return []
 
     def selection(self, events):
+        # jet or met cuts if requested
+        if self.selections is not None:
+            if "jet1pt" in self.selections:
+                cut = (events.Jet1.pt > self.selections["jet1pt"][0]) & (events.Jet1.pt < self.selections["jet1pt"][1])
+            if "met" in self.selections:
+                cut = (events.Met.pt > self.selections["met"][0]) & (events.Met.pt < self.selections["met"][1])
+            events = events[cut]
         return events
 
     def _get_dims(self, category):
@@ -165,6 +172,7 @@ class schanLowMassData(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = events.mZprime < 2501
         events = events[cut]
         return events
@@ -177,6 +185,7 @@ class schanHighMassData(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = events.mZprime > 2500
         events = events[cut]
         return events
@@ -189,6 +198,7 @@ class schanNoMedMassData(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = (events.mZprime < 1501) | (events.mZprime > 3500)
         events = events[cut]
         return events
@@ -204,6 +214,7 @@ class schan01Data(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = np.abs(events.rinv - 0.1) < 0.001
         events = events[cut]
         return events
@@ -216,6 +227,7 @@ class schan03Data(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = np.abs(events.rinv - 0.3) < 0.001
         events = events[cut]
         return events
@@ -228,6 +240,7 @@ class schan05Data(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = np.abs(events.rinv - 0.5) < 0.001
         events = events[cut]
         return events
@@ -240,6 +253,7 @@ class schan07Data(EventData):
         return selvars
 
     def selection(self, events):
+        events = super().selection(events)
         cut = np.abs(events.rinv - 0.7) < 0.001
         events = events[cut]
         return events
