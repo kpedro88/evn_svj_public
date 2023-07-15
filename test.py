@@ -129,21 +129,21 @@ def test():
     # make superset of all inputs
     args.inputs = list(set([i for inputs_tmp in args.inputs_multi for i in inputs_tmp]))
 
-    # get physics process & data
-    process = eparser.get_process(args)
-    events = process.get_events()
-
     # import list of test events (consistent w/ train.py)
     shuffler_path = args.npz if len(args.npz)>0 else "{}/shuffler_test.npz".format(args.outf+"/"+args.model_dir)
     shuffler_test = np.load(shuffler_path)
     if 'arr_0' in shuffler_test: shuffler_test = {"": shuffler_test['arr_0']}
     else: shuffler_test = {"": list(shuffler_test.values())[0]}
 
+    # get physics process & data
+    process = eparser.get_process(args,mask=shuffler_test)
+    events = process.get_events()
+
     # convert to numpy format
-    params = process.get_params(events,shuffler_test)
-    theory = process.get_theory(events,shuffler_test)
-    extras = process.get_extras(events,shuffler_test)
-    weights = process.get_weights(events,shuffler_test)
+    params = process.get_params(events)
+    theory = process.get_theory(events)
+    extras = process.get_extras(events)
+    weights = process.get_weights(events)
 
     # get saved model(s) & input(s)
     inputs = []
@@ -151,7 +151,7 @@ def test():
     artvars = []
     for outf,model_dir,args_input in zip(args.outfs,args.model_dirs,args.inputs_multi):
         process.inputs = args_input
-        inputs.append(process.get_inputs(events,shuffler_test))
+        inputs.append(process.get_inputs(events))
         models.append(import_attrs(model_dir, "AEVNetwork")(0, 0, [], "", outf+"/"+model_dir))
         # compute the machine-learned variable(s)
         artvars.append(np.nan_to_num(models[-1].network(inputs[-1]).numpy(),posinf=0,neginf=0))

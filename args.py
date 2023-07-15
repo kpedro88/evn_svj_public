@@ -116,6 +116,6 @@ class EVNParser:
             self.parser.write_config(args, oname)
         return args
 
-    def get_process(self, args):
-        process = EventData.processes[args.process](args.filedir, args.filenames, args.filenames_sep, args.params, args.inputs, args.theory, args.extras, args.weights, args.xsecs_sep, args.selections)
+    def get_process(self, args, mask=None):
+        process = EventData.processes[args.process](args.filedir, args.filenames, args.filenames_sep, args.params, args.inputs, args.theory, args.extras, args.weights, args.xsecs_sep, args.selections, mask=mask)
         return process

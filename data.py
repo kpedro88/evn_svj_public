@@ -11,7 +11,7 @@ class EventData:
         cls.processes[cls.__name__.replace("Data","")] = cls
 
     # params = OrderedDict, others = lists
-    def __init__(self, filedir, filenames, filenames_sep, params, inputs, theory, extras, weights, xsecs_sep=None, selections=None):
+    def __init__(self, filedir, filenames, filenames_sep, params, inputs, theory, extras, weights, xsecs_sep=None, selections=None, mask=None):
         # combine dir and filenames
         self.filenames = [filedir+("/" if filedir[-1]!="/" else "")+f for f in filenames]
         self.filenames_sep = OrderedDict([(k, filedir+("/" if filedir[-1]!="/" else "")+f) for k,f in filenames_sep.items()])
@@ -26,6 +26,7 @@ class EventData:
         for category in ['inputs','theory','extras','weights']:
             if len(getattr(self,category))==1 and len(getattr(self,category)[0])==0:
                 setattr(self,category,[])
+        self.mask = mask
         self.selections = selections
         self.xsecs_sep = xsecs_sep
 
@@ -44,6 +45,8 @@ class EventData:
         # filter out possible None values (indicating def_event_qty() combined or discarded some exprs)
         defs = {key: val for key,val in defs.items() if val is not None}
         events_tmp = ak.zip(defs, depth_limit=1)
+        # apply user-provided mask (if any) before selection
+        if self.mask is not None: events_tmp = events_tmp[np.squeeze(self.mask[""])]
         events_tmp = self.selection(events_tmp)
         return events_tmp
 
