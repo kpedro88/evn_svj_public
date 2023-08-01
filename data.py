@@ -45,22 +45,27 @@ class EventData:
         # filter out possible None values (indicating def_event_qty() combined or discarded some exprs)
         defs = {key: val for key,val in defs.items() if val is not None}
         events_tmp = ak.zip(defs, depth_limit=1)
-        # apply user-provided mask (if any) before selection
-        if self.mask is not None: events_tmp = events_tmp[np.squeeze(self.mask[""])]
-        events_tmp = self.selection(events_tmp)
         return events_tmp
+
+    def get_events_mask_sel(self, events):
+        # apply user-provided mask (if any) before selection
+        if self.mask is not None: events = events[np.squeeze(self.mask[""])]
+        events = self.selection(events)
+        return events
 
     def get_events(self):
         events = None
         for filename in self.filenames:
             events_tmp = self.get_events_file(filename)
             events = events_tmp if events is None else ak.concatenate([events,events_tmp],axis=0)
+        events = self.get_events_mask_sel(events)
         return events
 
     def get_events_sep(self):
         events_sep = OrderedDict()
         for key,filename in self.filenames_sep.items():
             events_sep[key] = self.get_events_file(filename)
+            events_sep[key] = self.get_events_mask_sel(events_sep[key])
         return events_sep
 
     def get_qty_keys(self, qty):
