@@ -70,10 +70,10 @@ def rgetattr(obj, attr, *args):
 
 def make_vector(arrays, qty, extras={}):
     qtys = {
-        "pt": rgetattr(arrays,[qty,"fCoordinates","fCoordinates.fPt"]),
-        "eta": rgetattr(arrays,[qty,"fCoordinates","fCoordinates.fEta"]),
-        "phi": rgetattr(arrays,[qty,"fCoordinates","fCoordinates.fPhi"]),
-        "E": rgetattr(arrays,[qty,"fCoordinates","fCoordinates.fE"]),
+        "pt": getattr(arrays,qty+"_pt"),
+        "eta": rgetattr(arrays,qty+"_eta"),
+        "phi": rgetattr(arrays,qty+"_phi"),
+        "m": rgetattr(arrays,qty+"_m"),
     }
     for key,val in extras.items():
         qtys[key] = rgetattr(arrays,val)

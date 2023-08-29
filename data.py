@@ -35,13 +35,14 @@ class EventData:
 
     def get_events_file(self, filename):
         datafile = up.open(filename)
-        datatree = datafile["GenVecAnalyzer/tree"]
-        # get unique, stable list
-        exprs = list(sorted(set([k for key in list(self.params.keys())+self.inputs+self.theory+self.extras+self.weights+self.get_selvars() for k in self.get_qty_keys(key)])))
+        datatree = datafile["tree_ML"]
+        # get unique, stable list of inputs
+        qtys = list(self.params.keys())+self.inputs+self.theory+self.extras+self.weights+self.get_selvars()
+        exprs = list(sorted(set([k for qty in qtys for k in self.get_qty_keys(qty)])))
         # handle requests for single component
         exprs_full = list(sorted(set([x.split('.')[0] for x in exprs])))
         arrays = datatree.arrays(expressions=exprs_full, library="ak")
-        defs = {key: self.def_event_qty(key, datatree[key.split('.')[0]].typename, arrays) for key in exprs}
+        defs = {qty: self.def_event_qty(qty, datatree[qty.split('.')[0]].typename if qty.split('.')[0] in datatree else "", arrays, filename, datatree) for qty in qtys}
         # filter out possible None values (indicating def_event_qty() combined or discarded some exprs)
         defs = {key: val for key,val in defs.items() if val is not None}
         events_tmp = ak.zip(defs, depth_limit=1)
@@ -69,35 +70,66 @@ class EventData:
         return events_sep
 
     def get_qty_keys(self, qty):
-        if qty=="RT":
-            return ["Met.pt","MT"]
+        if qty.startswith("Jet"):
+            return [qty.replace("Jet","pt_ordered_jet")+suff for suff in ["_pt","_eta","_phi","_m"]]
+        elif qty=="dR_M":
+            return ["Mjj_avg_dRpairing_GeV"]
+        elif "Truth" in qty:
+            return ["Mjj_msortedP1_high","Mjj_msortedP1_low","Mjj_msortedP2_high","Mjj_msortedP2_low","Mjj_msortedP3_high","Mjj_msortedP3_low"]
+        elif qty=="mStop":
+            return [] # taken from filename
         else:
             return [qty]
 
-    def def_event_qty(self, key, typename, arrays):
-        if "LorentzVector" in typename:
-            vec_tmp = make_vector(arrays,key.split('.')[0])
-            if '.' in key:
-                return getattr(vec_tmp, key.split('.')[1])
+    def def_event_qty(self, qty, typename, arrays, filename, tree):
+        def get_mStop(filename):
+            return float(filename.split('_')[-1].replace("GeV.root",""))
+        keys = self.get_qty_keys(qty)
+        if qty.startswith("Jet"):
+            vec_tmp = make_vector(arrays,keys[-1][:-2])
+            if '.' in qty:
+                return getattr(vec_tmp, qty.split('.')[1])
             else:
                 return vec_tmp
-        # todo: add more cases
-        elif "MAOS" in key:
-            return np.clip(np.nan_to_num(arrays[key]),0,10000)
+        elif qty=="mStop":
+            return get_mStop(filename)*np.ones(tree.num_entries)
+        elif "Truth" in qty:
+            mStop = get_mStop(filename)
+            if "Truth_high" in qty:
+                HM = np.array([
+                    arrays["Mjj_msortedP1_high"],
+                    arrays["Mjj_msortedP2_high"],
+                    arrays["Mjj_msortedP3_high"]
+                ])
+                tmp = np.argmin(np.abs(HM - mStop),axis=0)
+                if qty=="Truth_high":
+                    return tmp
+                elif qty=="Truth_high_M":
+                    return np.take_along_axis(HM,tmp[None],axis=0)
+            elif "Truth_avg" in qty:
+                AM = np.array([
+                    (arrays["Mjj_msortedP1_high"]+arrays["Mjj_msortedP1_low"])/2.,
+                    (arrays["Mjj_msortedP2_high"]+arrays["Mjj_msortedP2_low"])/2.,
+                    (arrays["Mjj_msortedP3_high"]+arrays["Mjj_msortedP3_low"])/2.
+                ])
+                tmp = np.argmin(np.abs(AM - mStop),axis=0)
+                if qty=="Truth_avg":
+                    return tmp
+                elif qty=="Truth_avg_M":
+                    return np.take_along_axis(AM,tmp[None],axis=0)
+        # absent any specified calculation, use the key directly (renaming)
+        elif len(keys)==1 and keys[0]!=qty:
+            return arrays[keys[0]]
         else: # assume scalar
-            return arrays[key]
+            return arrays[qty]
 
     def get_selvars(self):
         return []
 
     def selection(self, events):
-        # jet or met cuts if requested
+        # cuts if requested
         if self.selections is not None:
-            if "jet1pt" in self.selections:
-                cut = (events.Jet1.pt > self.selections["jet1pt"][0]) & (events.Jet1.pt < self.selections["jet1pt"][1])
-            if "met" in self.selections:
-                cut = (events.Met.pt > self.selections["met"][0]) & (events.Met.pt < self.selections["met"][1])
-            events = events[cut]
+            raise ValueError("Nothing implemented for selection(s): {}".format(self.selections))
         return events
 
     def _get_dims(self, category):
@@ -108,11 +140,6 @@ class EventData:
                     dims += 1
                 else:
                     dims += 4
-            elif "Met" in key:
-                if '.' in key:
-                    dims += 1
-                else:
-                    dims += 2
             else:
                 dims += 1
         setattr(self,category+"_dim",dims)
@@ -133,8 +160,6 @@ class EventData:
             columns = []
             for key in getattr(self,category):
                 new_columns = []
-                if key=="RT":
-                    new_columns.append(np.asarray(getattr(events,"Met.pt")/getattr(events,"MT")))
                 if len(new_columns)>0:
                     columns.extend(new_columns)
                     continue
@@ -142,8 +167,6 @@ class EventData:
                 qty = getattr(events,key)
                 if "Jet" in key and '.' not in key:
                     columns.extend([np.asarray(qty.energy), np.asarray(qty.px), np.asarray(qty.py), np.asarray(qty.pz)])
-                elif "Met" in key and '.' not in key:
-                    columns.extend([np.asarray(qty.px), np.asarray(qty.py)])
                 else:
                     columns.extend([np.asarray(qty)])
             columns = np.column_stack(columns)
@@ -169,108 +192,5 @@ class EventData:
     def get_weights(self, events, event_list=None):
         return self._get_columns(events,"weights",event_list)
 
-class schanData(EventData):
-    pass
-
-class schanLowMassData(EventData):
-    def get_selvars(self):
-        selvars = [
-            "mZprime",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = events.mZprime < 2501
-        events = events[cut]
-        return events
-
-class schanHighMassData(EventData):
-    def get_selvars(self):
-        selvars = [
-            "mZprime",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = events.mZprime > 2500
-        events = events[cut]
-        return events
-
-class schanNoMedMassData(EventData):
-    def get_selvars(self):
-        selvars = [
-            "mZprime",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = (events.mZprime < 1501) | (events.mZprime > 3500)
-        events = events[cut]
-        return events
-
-class schanMixData(EventData):
-    pass
-
-class schan01Data(EventData):
-    def get_selvars(self):
-        selvars = [
-            "rinv",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = np.abs(events.rinv - 0.1) < 0.001
-        events = events[cut]
-        return events
-
-class schan03Data(EventData):
-    def get_selvars(self):
-        selvars = [
-            "rinv",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = np.abs(events.rinv - 0.3) < 0.001
-        events = events[cut]
-        return events
-
-class schan05Data(EventData):
-    def get_selvars(self):
-        selvars = [
-            "rinv",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = np.abs(events.rinv - 0.5) < 0.001
-        events = events[cut]
-        return events
-
-class schan07Data(EventData):
-    def get_selvars(self):
-        selvars = [
-            "rinv",
-        ]
-        return selvars
-
-    def selection(self, events):
-        events = super().selection(events)
-        cut = np.abs(events.rinv - 0.7) < 0.001
-        events = events[cut]
-        return events
-
-class tchanSingleData(EventData):
-    pass
-
-class tchanPairData(EventData):
-    pass
-
-class qcdFlatData(EventData):
+class dijetPairData(EventData):
     pass
