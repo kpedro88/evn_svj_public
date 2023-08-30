@@ -175,6 +175,48 @@ def make_2d(var_info, bins, xmin, xmax, ymin, ymax, extra_text, param_info, fold
 
     save_figure(plt, "{}/scatter_{}_{}{}.pdf".format(folder, list(var_info.keys())[0], list(var_info.keys())[1], "_{}".format(list(first(var_info)["vals_sep"].keys())[index]) if index is not None else ""))
 
+def pairing(extras, target, pkey=None, outputs=[]):
+    dkey = "vals" if pkey is None else "vals_sep"
+    inputs = [
+        extras["Mjj_msortedP1_high"][dkey],
+        extras["Mjj_msortedP1_low"][dkey],
+        extras["Mjj_msortedP2_high"][dkey],
+        extras["Mjj_msortedP2_low"][dkey],
+        extras["Mjj_msortedP3_high"][dkey],
+        extras["Mjj_msortedP3_low"][dkey],
+    ]
+    if pkey is not None: inputs = [item[pkey] for item in inputs]
+    metric = np.array([
+        (inputs[0]-target)**2+(inputs[1]-target)**2,
+        (inputs[2]-target)**2+(inputs[3]-target)**2,
+        (inputs[4]-target)**2+(inputs[5]-target)**2,
+    ])
+    best = np.argmin(metric,axis=0)
+    if len(outputs)==0:
+        return best
+    outputs = {key:[] for key in outputs}
+    for key in outputs.keys():
+        if key=="avg":
+            mout = np.array([
+                (inputs[0]+inputs[1])/2.,
+                (inputs[2]+inputs[3])/2.,
+                (inputs[4]+inputs[5])/2.,
+            ])
+        elif key=="high":
+            mout = np.array([
+                inputs[0],
+                inputs[2],
+                inputs[4],
+            ])
+        elif key=="low":
+            mout = np.array([
+                inputs[1],
+                inputs[3],
+                inputs[5],
+            ])
+        outputs[key] = np.take_along_axis(mout,best[None],axis=0).T
+    return best, outputs
+
 # uses separate datasets from training w/ distinct parameter values
 def analyze():
     eparser = EVNParser("plots")
@@ -191,6 +233,7 @@ def analyze():
     parser.add_argument("--extra-text", type=str, default=[], action="append", help="extra text for legend (can be called multiple times)")
     parser.add_argument("--npz", type=str, default=None, help="load an npz file of test event indices")
     parser.add_argument("--pair", default=False, action="store_true", help="compute pairing accuracy")
+    parser.add_argument("--pair-mass", default=False, action="store_true", help="plot mass using predicted pairing")
     args = eparser.parse_args()
     if args.extra_text and not isinstance(args.extra_text,list): args.extra_text = [args.extra_text]
     outf_models = args.outf+"/"+args.model_dir
@@ -256,6 +299,16 @@ def analyze():
             for vname,vinfo in var_info.items():
                 _, vinfo["vals"], vinfo["vals_sep"] = calibrate(vinfo, var_params, coeff=calibrations[vname])
 
+    # get derived mass from pairing (no calib)
+    if args.pair_mass:
+        extras_vals = process.get_extras(events,event_list)
+        extras = get_var_info(args.axes, process.extras, extras_vals)
+        pm_vals = OrderedDict()
+        for pkey,vals in var_info["AEV"]["vals_sep"].items():
+            _, predM = pairing(extras, vals, pkey, outputs=["avg"])
+            pm_vals[pkey] = [predM["avg"]]
+        var_info.update(get_var_info(args.axes, ["pair_M_avg"], pm_vals))
+
     # make overlaid histogram
     make_1d(var_info, args.xmin, args.xmax, args.bins, args.xname, args.logy, args.extra_text, var_params, outf_test, res_table=args.verbose, weights=weights)
 
@@ -275,20 +328,10 @@ def analyze():
         extras_vals = process.get_extras(events,event_list)
         extras = get_var_info(args.axes, process.extras, extras_vals)
         masses = np.concatenate([pkey*np.ones_like(vals) for pkey,vals in var_info["AEV"]["vals_sep"].items()])
-        TM = np.array([
-            (extras["Mjj_msortedP1_high"]["vals"]-masses)**2+(extras["Mjj_msortedP1_low"]["vals"]-masses)**2,
-            (extras["Mjj_msortedP2_high"]["vals"]-masses)**2+(extras["Mjj_msortedP2_low"]["vals"]-masses)**2,
-            (extras["Mjj_msortedP3_high"]["vals"]-masses)**2+(extras["Mjj_msortedP3_low"]["vals"]-masses)**2,
-        ])
-        truth = np.argmin(TM,axis=0)
+        truth = pairing(extras, masses)
         # minimize 1 - acc
         def acc(x):
-            PM = np.array([
-                (extras["Mjj_msortedP1_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP1_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
-                (extras["Mjj_msortedP2_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP2_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
-                (extras["Mjj_msortedP3_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP3_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
-            ])
-            pred = np.argmin(PM,axis=0)
+            pred = pairing(extras, x[0]*var_info["AEV"]["vals"])
             target = 1 - sum(truth==pred)/len(var_info["AEV"]["vals"])
             return target
         from scipy.optimize import minimize
@@ -299,18 +342,8 @@ def analyze():
         masses = []
         accs = []
         for pkey,vals in var_info["AEV"]["vals_sep"].items():
-            TM = np.array([
-                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-pkey)**2,
-                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-pkey)**2,
-                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-pkey)**2,
-            ])
-            truth = np.argmin(TM,axis=0)
-            PM = np.array([
-                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-x1*vals)**2,
-                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-x1*vals)**2,
-                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-x1*vals)**2,
-            ])
-            pred = np.argmin(PM,axis=0)
+            truth = pairing(extras, pkey, pkey)
+            pred = pairing(extras, x1*vals, pkey)
             masses.append(pkey)
             accs.append(sum(truth==pred)/len(vals))
         acc_output = {'x': masses, 'y': accs}
