@@ -92,7 +92,7 @@ class EventData:
             else:
                 return vec_tmp
         elif qty=="mStop":
-            return get_mStop(filename)*np.ones(tree.num_entries)
+            return ak.from_numpy(get_mStop(filename)*np.ones(tree.num_entries))
         elif "Truth" in qty:
             mStop = get_mStop(filename)
             if "Truth_high" in qty:
@@ -103,9 +103,9 @@ class EventData:
                 ])
                 tmp = np.argmin(np.abs(HM - mStop),axis=0)
                 if qty=="Truth_high":
-                    return tmp
+                    return ak.from_numpy(tmp)
                 elif qty=="Truth_high_M":
-                    return np.take_along_axis(HM,tmp[None],axis=0)
+                    return ak.from_numpy(np.take_along_axis(HM,tmp[None],axis=0).T)
             elif "Truth_avg" in qty:
                 AM = np.array([
                     (arrays["Mjj_msortedP1_high"]+arrays["Mjj_msortedP1_low"])/2.,
@@ -114,9 +114,9 @@ class EventData:
                 ])
                 tmp = np.argmin(np.abs(AM - mStop),axis=0)
                 if qty=="Truth_avg":
-                    return tmp
+                    return ak.from_numpy(tmp)
                 elif qty=="Truth_avg_M":
-                    return np.take_along_axis(AM,tmp[None],axis=0)
+                    return ak.from_numpy(np.take_along_axis(AM,tmp[None],axis=0).T)
         # absent any specified calculation, use the key directly (renaming)
         elif len(keys)==1 and keys[0]!=qty:
             return arrays[keys[0]]

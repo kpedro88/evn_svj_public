@@ -104,7 +104,7 @@ def skewness(x,y,m):
     skewness_val = scipy.stats.skew(rel, nan_policy='omit')
     return skewness_val
 
-def calibrate(x, y, coeff=None, zero=True):
+def calibrate(x, y, coeff=None, zero=True, gauss=False):
     from collections import OrderedDict
     import numpy as np
 
@@ -114,16 +114,39 @@ def calibrate(x, y, coeff=None, zero=True):
     if "vals" in x or coeff is None:
         xvals = x["vals"]
         matrix = np.stack([xvals**d for d in degrees], axis=-1)
+        orig_matrix = np.copy(matrix)
     if coeff is None:
         # nan check
         yvals = y["vals"]
         mask = ~np.isnan(xvals) & ~np.isnan(yvals)
-        coeff = np.linalg.lstsq(matrix[mask], yvals[mask], rcond=None)[0]
+        xvals = xvals[mask]
+        yvals = yvals[mask]
+        matrix = matrix[mask]
+        # find the peak for each y value
+        if gauss:
+            import sklearn.mixture
+            yuniq = np.unique(yvals)
+            peaks = []
+            for yu in yuniq:
+                xu = xvals[yvals==yu]
+                xu_avg = np.average(xu)
+                xu_std = np.std(xu)
+                # fit around mean
+                nstd = 1
+                xu_mask = (xu_avg - nstd*xu_std < xu) & (xu < xu_avg + nstd*xu_std)
+                xu = xu[xu_mask]
+                gaus = sklearn.mixture.GaussianMixture(n_components=1,random_state=0).fit(xu.reshape(-1, 1))
+                peaks.append(gaus.means_[0][0])
+                # print(yu,len(xu),xu_avg,xu_std,np.sum(xu_mask),peaks[-1])
+            peaks = np.array(peaks)
+            matrix = np.stack([peaks**d for d in degrees], axis=-1)
+            yvals = yuniq
+        coeff = np.linalg.lstsq(matrix, yvals, rcond=None)[0]
     elif isinstance(coeff,list):
         coeff = np.array(coeff)
     # apply calibration to values
     if "vals" in x:
-        fit = np.transpose(np.dot(matrix, coeff))
+        fit = np.transpose(np.dot(orig_matrix, coeff))
     else:
         fit = np.array([])
     if "vals_sep" in x:
