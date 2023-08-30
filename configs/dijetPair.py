@@ -19,8 +19,15 @@ config.inputs = [
 ]
 config.theory = [
     "dR_M",
-    "Truth_high_M",
-    "Truth_avg_M",
+    "Truth_M_high",
+    "Truth_M_low",
+    "Truth_M_avg",
+    "Truth_high_M_high",
+    "Truth_high_M_low",
+    "Truth_high_M_avg",
+    "Truth_avg_M_high",
+    "Truth_avg_M_low",
+    "Truth_avg_M_avg",
 ]
 
 from axes_dijet import axes

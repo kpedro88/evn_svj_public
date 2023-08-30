@@ -94,29 +94,62 @@ class EventData:
         elif qty=="mStop":
             return ak.from_numpy(get_mStop(filename)*np.ones(tree.num_entries))
         elif "Truth" in qty:
-            mStop = get_mStop(filename)
-            if "Truth_high" in qty:
-                HM = np.array([
+            def get_HM(arrays):
+                return np.array([
                     arrays["Mjj_msortedP1_high"],
                     arrays["Mjj_msortedP2_high"],
                     arrays["Mjj_msortedP3_high"]
                 ])
-                tmp = np.argmin(np.abs(HM - mStop),axis=0)
-                if qty=="Truth_high":
-                    return ak.from_numpy(tmp)
-                elif qty=="Truth_high_M":
-                    return ak.from_numpy(np.take_along_axis(HM,tmp[None],axis=0).T)
-            elif "Truth_avg" in qty:
-                AM = np.array([
+            def get_LM(arrays):
+                return np.array([
+                    arrays["Mjj_msortedP1_low"],
+                    arrays["Mjj_msortedP2_low"],
+                    arrays["Mjj_msortedP3_low"]
+                ])
+            def get_AM(arrays):
+                return np.array([
                     (arrays["Mjj_msortedP1_high"]+arrays["Mjj_msortedP1_low"])/2.,
                     (arrays["Mjj_msortedP2_high"]+arrays["Mjj_msortedP2_low"])/2.,
                     (arrays["Mjj_msortedP3_high"]+arrays["Mjj_msortedP3_low"])/2.
                 ])
+            mStop = get_mStop(filename)
+            if "Truth_high" in qty:
+                HM = get_HM(arrays)
+                tmp = np.argmin(np.abs(HM - mStop),axis=0)
+                if qty=="Truth_high":
+                    return ak.from_numpy(tmp)
+                elif qty=="Truth_high_M_high":
+                    return ak.from_numpy(np.take_along_axis(HM,tmp[None],axis=0).T)
+                elif qty=="Truth_high_M_low":
+                    return ak.from_numpy(np.take_along_axis(get_LM(arrays),tmp[None],axis=0).T)
+                elif qty=="Truth_high_M_avg":
+                    return ak.from_numpy(np.take_along_axis(get_AM(arrays),tmp[None],axis=0).T)
+            elif "Truth_avg" in qty:
+                AM = get_AM(arrays)
                 tmp = np.argmin(np.abs(AM - mStop),axis=0)
                 if qty=="Truth_avg":
                     return ak.from_numpy(tmp)
-                elif qty=="Truth_avg_M":
+                elif qty=="Truth_avg_M_high":
+                    return ak.from_numpy(np.take_along_axis(get_HM(arrays),tmp[None],axis=0).T)
+                elif qty=="Truth_avg_M_low":
+                    return ak.from_numpy(np.take_along_axis(get_LM(arrays),tmp[None],axis=0).T)
+                elif qty=="Truth_avg_M_avg":
                     return ak.from_numpy(np.take_along_axis(AM,tmp[None],axis=0).T)
+            else:
+                TM = np.array([
+                    (arrays["Mjj_msortedP1_high"]-mStop)**2+(arrays["Mjj_msortedP1_low"]-mStop)**2,
+                    (arrays["Mjj_msortedP2_high"]-mStop)**2+(arrays["Mjj_msortedP2_low"]-mStop)**2,
+                    (arrays["Mjj_msortedP3_high"]-mStop)**2+(arrays["Mjj_msortedP3_low"]-mStop)**2,
+                ])
+                tmp = np.argmin(TM,axis=0)
+                if qty=="Truth":
+                    return ak.from_numpy(tmp)
+                elif qty=="Truth_M_high":
+                    return ak.from_numpy(np.take_along_axis(get_HM(arrays),tmp[None],axis=0).T)
+                elif qty=="Truth_M_low":
+                    return ak.from_numpy(np.take_along_axis(get_LM(arrays),tmp[None],axis=0).T)
+                elif qty=="Truth_M_avg":
+                    return ak.from_numpy(np.take_along_axis(get_AM(arrays),tmp[None],axis=0).T)
         # absent any specified calculation, use the key directly (renaming)
         elif len(keys)==1 and keys[0]!=qty:
             return arrays[keys[0]]
