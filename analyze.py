@@ -190,6 +190,7 @@ def analyze():
     parser.add_argument("--logy", default=False, action="store_true", help="logarithmic y axis")
     parser.add_argument("--extra-text", type=str, default=[], action="append", help="extra text for legend (can be called multiple times)")
     parser.add_argument("--npz", type=str, default=None, help="load an npz file of test event indices")
+    parser.add_argument("--pair", default=False, action="store_true", help="compute pairing accuracy")
     args = eparser.parse_args()
     if args.extra_text and not isinstance(args.extra_text,list): args.extra_text = [args.extra_text]
     outf_models = args.outf+"/"+args.model_dir
@@ -269,7 +270,28 @@ def analyze():
             comb_info = OrderedDict([(comb_i, var_info[comb_i]) for comb_i in comb])
             make_2d(comb_info, args.bins, args.xmin, args.xmax, args.ymin, args.ymax, args.extra_text, var_params, outf_test, weights=weights)
 
-    # todo: add more analysis e.g. resolution vs. param?
+    # pairings
+    if args.pair:
+        extras_vals = process.get_extras(events,event_list)
+        extras = get_var_info(args.axes, process.extras, extras_vals)
+        masses = []
+        accs = []
+        for pkey,vals in var_info["AEV"]["vals_sep"].items():
+            TM = np.array([
+                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-pkey)**2,
+                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-pkey)**2,
+                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-pkey)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-pkey)**2,
+            ])
+            truth = np.argmin(TM,axis=0)
+            PM = np.array([
+                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-vals)**2,
+                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-vals)**2,
+                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-vals)**2,
+            ])
+            pred = np.argmin(PM,axis=0)
+            masses.append(pkey)
+            accs.append(sum(truth==pred)/len(vals))
+        print(masses,accs)
 
 if __name__=="__main__":
     analyze()

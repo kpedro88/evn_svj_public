@@ -11,4 +11,10 @@ axes = {
     "Truth_avg_M_high": {"bins": 100, "lims": (250, 2000), "label": r"$M_{\mathrm{truth(avg)}}^{\mathrm{high}}$ [GeV]", "leg": r"$M_{\mathrm{truth(avg)}}^{\mathrm{high}}$"},
     "Truth_avg_M_low": {"bins": 100, "lims": (250, 2000), "label": r"$M_{\mathrm{truth(avg)}}^{\mathrm{low}}$ [GeV]", "leg": r"$M_{\mathrm{truth(avg)}}^{\mathrm{low}}$"},
     "Truth_avg_M_avg": {"bins": 100, "lims": (250, 2000), "label": r"$M_{\mathrm{truth(avg)}}^{\mathrm{avg}}$ [GeV]", "leg": r"$M_{\mathrm{truth(avg)}}^{\mathrm{avg}}$"},
+    "Mjj_msortedP1_high": {"bins": 100, "lims": (250, 2000), "label": r"$M_{1}^{\mathrm{high}}$ [GeV]", "leg": r"$M_{1}^{\mathrm{high}}$"},
+    "Mjj_msortedP1_low": {"bins": 100, "lims": (250, 2000), "label": r"$M_{1}^{\mathrm{low}}$ [GeV]", "leg": r"$M_{1}^{\mathrm{low}}$"},
+    "Mjj_msortedP2_high": {"bins": 100, "lims": (250, 2000), "label": r"$M_{2}^{\mathrm{high}}$ [GeV]", "leg": r"$M_{2}^{\mathrm{high}}$"},
+    "Mjj_msortedP2_low": {"bins": 100, "lims": (250, 2000), "label": r"$M_{2}^{\mathrm{low}}$ [GeV]", "leg": r"$M_{2}^{\mathrm{low}}$"},
+    "Mjj_msortedP3_high": {"bins": 100, "lims": (250, 2000), "label": r"$M_{3}^{\mathrm{high}}$ [GeV]", "leg": r"$M_{3}^{\mathrm{high}}$"},
+    "Mjj_msortedP3_low": {"bins": 100, "lims": (250, 2000), "label": r"$M_{3}^{\mathrm{low}}$ [GeV]", "leg": r"$M_{3}^{\mathrm{low}}$"},
 }
