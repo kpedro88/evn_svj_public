@@ -274,6 +274,28 @@ def analyze():
     if args.pair:
         extras_vals = process.get_extras(events,event_list)
         extras = get_var_info(args.axes, process.extras, extras_vals)
+        masses = np.concatenate([pkey*np.ones_like(vals) for pkey,vals in var_info["AEV"]["vals_sep"].items()])
+        TM = np.array([
+            (extras["Mjj_msortedP1_high"]["vals"]-masses)**2+(extras["Mjj_msortedP1_low"]["vals"]-masses)**2,
+            (extras["Mjj_msortedP2_high"]["vals"]-masses)**2+(extras["Mjj_msortedP2_low"]["vals"]-masses)**2,
+            (extras["Mjj_msortedP3_high"]["vals"]-masses)**2+(extras["Mjj_msortedP3_low"]["vals"]-masses)**2,
+        ])
+        truth = np.argmin(TM,axis=0)
+        # minimize 1 - acc
+        def acc(x):
+            PM = np.array([
+                (extras["Mjj_msortedP1_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP1_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
+                (extras["Mjj_msortedP2_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP2_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
+                (extras["Mjj_msortedP3_high"]["vals"]-x[0]*var_info["AEV"]["vals"])**2+(extras["Mjj_msortedP3_low"]["vals"]-x[0]*var_info["AEV"]["vals"])**2,
+            ])
+            pred = np.argmin(PM,axis=0)
+            target = 1 - sum(truth==pred)/len(var_info["AEV"]["vals"])
+            return target
+        from scipy.optimize import minimize
+        # full calibration is x * initial calibration
+        x0 = np.array([1])
+        res = minimize(acc, x0, method='nelder-mead', options={'disp': args.verbose})
+        x1 = res.x[0]
         masses = []
         accs = []
         for pkey,vals in var_info["AEV"]["vals_sep"].items():
@@ -284,14 +306,21 @@ def analyze():
             ])
             truth = np.argmin(TM,axis=0)
             PM = np.array([
-                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-vals)**2,
-                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-vals)**2,
-                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-vals)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-vals)**2,
+                (extras["Mjj_msortedP1_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP1_low"]["vals_sep"][pkey]-x1*vals)**2,
+                (extras["Mjj_msortedP2_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP2_low"]["vals_sep"][pkey]-x1*vals)**2,
+                (extras["Mjj_msortedP3_high"]["vals_sep"][pkey]-x1*vals)**2+(extras["Mjj_msortedP3_low"]["vals_sep"][pkey]-x1*vals)**2,
             ])
             pred = np.argmin(PM,axis=0)
             masses.append(pkey)
             accs.append(sum(truth==pred)/len(vals))
-        print(masses,accs)
+        acc_output = {'x': masses, 'y': accs}
+        with open("{}/acc.py".format(outf_test), 'w') as afile:
+            afile.write("acc = "+repr(acc_output))
+        # update calibration
+        new_calibrations = {key: 1.0 for key in calibrations.keys()}
+        new_calibrations["AEV"] = [x1*calibrations["AEV"][0]]
+        with open("{}/calibrations.py".format(outf_test), 'w') as cfile:
+            cfile.write("calibrations = "+repr(new_calibrations))
 
 if __name__=="__main__":
     analyze()
