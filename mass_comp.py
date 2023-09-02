@@ -8,37 +8,34 @@ lines = get_lines()
 colors = get_colors()
 
 legnames = [
-    r"$V_{m_{\mathrm{Z}^{\prime}} > 2500\,\mathrm{GeV}}$",
-    r"$V_{m_{\mathrm{Z}^{\prime}} \leq 1500~\mathrm{or}~m_{\mathrm{Z}^{\prime}} > 3500\,\mathrm{GeV}}$",
-    r"$V_{m_{\mathrm{Z}^{\prime}} \leq 2500\,\mathrm{GeV}}$",
+    r"$V$",
+    r"$V_{m_{\widetilde{\mathrm{t}}} > 500\,\mathrm{GeV}}$",
+    r"$V_{m_{\widetilde{\mathrm{t}}} < 1000\,\mathrm{GeV}}$",
 ]
 
-dirBaseline = "schan"
-histsBaseline = import_attrs("{}/plots/hists.py".format(dirBaseline),"hists")
-dirsTrain = [
-    "schanHighMass",
-    "schanNoMedMass",
-    "schanLowMass",
+dirs = [
+    "dijetPair_aug29_8",
+    "dijetPairLowMass_sep1_3",
+    "dijetPairHighMass_sep1_3",
 ]
 hnames = [
+    "AEV_500",
+    "AEV_700",
     "AEV_1000",
-    "AEV_2000",
-    "AEV_3000",
 ]
 components = [OrderedDict(), OrderedDict(), OrderedDict()]
 
-for counter,(component,dirTrain,legname,hname) in enumerate(zip(components,dirsTrain,legnames,hnames)):
-    hists = import_attrs("{}/plotsRecalib/hists.py".format(dirTrain),"hists")
-    # full training for comparison
-    component[hname] = {"counts": histsBaseline[hname]["counts"], "bins": histsBaseline[hname]["bins"], "color": colors[0], "linestyle": lines[0], "leg": r"$V$"}
-    component[hname+"_"+dirTrain] = {"counts": hists[hname]["counts"], "bins": hists[hname]["bins"], "color": colors[counter+1], "linestyle": lines[counter+1], "leg": legname}
-    component["mZprime"] = {"leg": r"$m_{\mathrm{Z}^{\prime}} = "+str(hname.split('_')[1])+"\,\mathrm{GeV}$"}
+for counter,(component,hname) in enumerate(zip(components,hnames)):
+    for counter2,(dir,legname) in enumerate(zip(dirs,legnames)):
+        hists = import_attrs("{}/plotsPairAvg/hists.py".format(dir),"hists")
+        component[hname+"_"+dir] = {"counts": hists[hname]["counts"], "bins": hists[hname]["bins"], "color": colors[counter2], "linestyle": lines[counter2], "leg": legname}
+    component["mStop"] = {"leg": r"$m_{\widetilde{\mathrm{t}}} = "+str(hname.split('_')[1])+"\,\mathrm{GeV}$"}
     component["y"] = {"name": r"arbitrary units", "log": False}
-    component["x"] = {"name": r"mass [calibrated]", "range": [0, 4000]}
+    component["x"] = {"name": r"mass [calibrated]", "range": [250, 1250]}
     component["leg"] = {"on": True}
 
 # manual tweaks
 components[1]["y"].pop("name")
 components[2]["y"].pop("name")
 
-plotter([components], [9,9,9], [7], dirBaseline, "mass_comp")
+plotter([components], [9,9,9], [7], dirs[0], "mass_comp")
