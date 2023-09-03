@@ -23,19 +23,17 @@ hnames = [
     "AEV_700",
     "AEV_1000",
 ]
-components = [OrderedDict(), OrderedDict(), OrderedDict()]
+component = OrderedDict()
 
-for counter,(component,hname) in enumerate(zip(components,hnames)):
-    for counter2,(dir,legname) in enumerate(zip(dirs,legnames)):
-        hists = import_attrs("{}/plotsPairAvg/hists.py".format(dir),"hists")
-        component[hname+"_"+dir] = {"counts": hists[hname]["counts"], "bins": hists[hname]["bins"], "color": colors[counter2], "linestyle": lines[counter2], "leg": legname}
-    component["mStop"] = {"leg": r"$m_{\widetilde{\mathrm{t}}} = "+str(hname.split('_')[1])+"\,\mathrm{GeV}$"}
-    component["y"] = {"name": r"arbitrary units", "log": False}
-    component["x"] = {"name": r"mass [calibrated]", "range": [250, 1250]}
-    component["leg"] = {"on": True}
+var_lines = OrderedDict()
+for iline,(dir,legname) in enumerate(zip(dirs,legnames)):
+    var_lines[dir] = {"leg": legname, "color": 'black', "linestyle": lines[iline]}
+    hists = import_attrs("{}/plotsPairAvg/hists.py".format(dir),"hists")
+    for icolor,hname in enumerate(hnames):
+        component[hname+"_"+dir] = {"counts": hists[hname]["counts"], "bins": hists[hname]["bins"], "color": colors[icolor], "linestyle": lines[iline], "leg": r"$m_{\widetilde{\mathrm{t}}} = "+str(hname.split('_')[1])+"\,\mathrm{GeV}$" if iline==0 else ''}
+component.update(var_lines)
+component["y"] = {"name": r"arbitrary units", "log": False}
+component["x"] = {"name": r"mass [calibrated]", "range": [250, 1250]}
+component["leg"] = {"on": True}
 
-# manual tweaks
-components[1]["y"].pop("name")
-components[2]["y"].pop("name")
-
-plotter([components], [9,9,9], [7], dirs[0], "mass_comp")
+plotter([[component]], [9], [7], dirs[0], "mass_comp")
