@@ -1,5 +1,8 @@
 axes = {
     "AEV": {"bins": 100, "label": r"Artificial variable $V$", "leg": r"$V$"},
+    "AEV0": {"bins": 100, "label": r"$V$", "leg": r"$V$"},
+    "AEV1": {"bins": 100, "label": r"$V_{m_{\widetilde{\mathrm{t}}} < 1000\,\mathrm{GeV}}$", "leg": r"$V_{m_{\widetilde{\mathrm{t}}} < 1000\,\mathrm{GeV}}$"},
+    "AEV2": {"bins": 100, "label": r"$V_{m_{\widetilde{\mathrm{t}}} > 500\,\mathrm{GeV}}$", "leg": r"$V_{m_{\widetilde{\mathrm{t}}} > 500\,\mathrm{GeV}}$"},
     "mStop": {"bins": 6, "lims": (500, 1000), "label": r"$m_{\widetilde{\mathrm{t}}}$ [GeV]", "leg": r"$m_{\widetilde{\mathrm{t}}}$", "unit": "GeV"},
     "dR_M": {"bins": 100, "lims": (250, 2000), "label": r"$M_{\Delta R}$ [GeV]", "leg": r"$M_{\Delta R}$"},
     "pair_M_avg": {"bins": 100, "lims": (250, 2000), "label": r"$M_{\mathrm{pred}}^{\mathrm{avg}}$ [GeV]", "leg": r"$M_{\mathrm{pred}}^{\mathrm{avg}}$"},
