@@ -9,8 +9,8 @@ colors = get_colors()
 
 legnames = [
     r"$V$",
-    r"$V_{m_{\widetilde{\mathrm{t}}} > 500\,\mathrm{GeV}}$",
     r"$V_{m_{\widetilde{\mathrm{t}}} < 1000\,\mathrm{GeV}}$",
+    r"$V_{m_{\widetilde{\mathrm{t}}} > 500\,\mathrm{GeV}}$",
 ]
 
 dirs = [
