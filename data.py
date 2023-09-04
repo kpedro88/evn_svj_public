@@ -157,9 +157,11 @@ class EventData:
             return arrays[qty]
 
     def get_selvars(self):
-        return []
+        return ["evt_trig"]
 
     def selection(self, events):
+        cut = (events.evt_trig == 1)
+        events = events[cut]
         # cuts if requested
         if self.selections is not None:
             raise ValueError("Nothing implemented for selection(s): {}".format(self.selections))

@@ -14,9 +14,9 @@ legnames = [
 ]
 
 dirs = [
-    "dijetPair_aug29_8",
-    "dijetPairLowMass_sep1_3",
-    "dijetPairHighMass_sep1_3",
+    "dijetPair_sep4_3",
+    "dijetPairLowMass_sep4_3",
+    "dijetPairHighMass_sep4_3",
 ]
 hnames = [
     "AEV_500",
