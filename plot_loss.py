@@ -33,15 +33,29 @@ def plot_loss():
         max_len = 0
         for cname, curve in curves.items():
             losses = None
-            for path in curve["folder"]:
+            epoch_sel = 0
+            used_best = False
+            for ipath,path in enumerate(curve["folder"]):
                 path_models = path+"/"+args.model_dir
-                losses_tmp = np.load("{}/loss.npz".format(get_loss_path(path_models)))['arr_0']
+                loss_path = get_loss_path(path_models)
+                losses_tmp = np.load("{}/loss.npz".format(loss_path))['arr_0']
+                epoch_path = "{}/epoch.txt".format(loss_path)
+                epoch_tmp = None
+                if os.path.isfile(epoch_path):
+                    used_best = True
+                    with open(epoch_path,'r') as efile:
+                        epoch_tmp = int(efile.read().rstrip().split()[0])
+                if epoch_tmp is None: epoch_tmp = len(losses_tmp)-1
+                if ipath<len(curve["folder"])-1: losses_tmp = losses_tmp[:, :epoch_tmp+1]
+                epoch_sel += epoch_tmp
+                if ipath>0: epoch_sel += 1
                 # allow concatenating losses from continued training runs
                 if losses is None:
                     losses = losses_tmp
                 else:
                     losses = np.concatenate([losses, losses_tmp],axis=1)
             curve["array"] = losses
+            if used_best: curve["epoch"] = epoch_sel
             max_len = max(max_len,losses.shape[1])
         for icolor, (cname, curve) in enumerate(curves.items()):
             losses = curve["array"]
@@ -55,9 +69,13 @@ def plot_loss():
                 if args.extend and losses.shape[1] < max_len:
                     extend_y = losses[1][-1]*np.ones(len(extend_x))
                     ax.plot(extend_x, extend_y, color=color_list[icolor], linestyle="dashdot")
+            if "epoch" in curve:
+                ax.plot([curve["epoch"]], [losses[1][curve["epoch"]]], color=color_list[icolor], marker='o', markerfacecolor='black')
         if args.val:
             var_lines.append(Line2D([0],[0],color='black',linestyle="solid",label="training"))
             var_lines.append(Line2D([0],[0],color='black',linestyle="dashed",label="validation"))
+        if any("epoch" in curve for curve in curves.values()):
+            var_lines.append(Line2D([0],[0],color='black',linestyle='None',markerfacecolor='black',marker='o',label="selected"))
         handles, labels = ax.get_legend_handles_labels()
         handles.extend(var_lines)
         ax.legend(handles=handles)
@@ -70,7 +88,7 @@ def plot_loss():
         if os.path.isfile(epoch_path):
             with open(epoch_path,'r') as efile:
                 epoch = int(efile.read().rstrip().split()[0])
-                ax.plot([epoch],[losses[1][epoch]], color='black', marker='o', label="best")
+                ax.plot([epoch],[losses[1][epoch]], color='black', marker='o', markerfacecolor='black', label="best")
         ax.legend()
 
     if args.yrange is not None:
