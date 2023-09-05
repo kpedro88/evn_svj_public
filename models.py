@@ -79,3 +79,67 @@ class EVNComposite:
     def save(self, folder):
         self.AEV.save(folder)
         self.AuxC.save(folder)
+
+# a simplified reimplementation of ModelCheckpoint to handle composite models
+class CompositeCheckpoint(tf.keras.callbacks.Callback):
+    def __init__(
+        self,
+        model,
+        folder,
+        monitor = "val_loss",
+        mode = "auto",
+    ):
+        super().__init__()
+        self._supports_tf_logs = True
+        self.full_model = model
+        self.folder = folder
+        self.monitor = monitor
+        self.epochs_since_last_save = 0
+        self.best = None
+
+        if mode not in ["auto", "min", "max"]:
+            logging.warning(
+                "ModelCheckpoint mode %s is unknown, fallback to auto mode.",
+                mode,
+            )
+            mode = "auto"
+
+        if mode == "min":
+            self.monitor_op = np.less
+            if self.best is None:
+                self.best = np.Inf
+        elif mode == "max":
+            self.monitor_op = np.greater
+            if self.best is None:
+                self.best = -np.Inf
+        else:
+            if "acc" in self.monitor or self.monitor.startswith("fmeasure"):
+                self.monitor_op = np.greater
+                if self.best is None:
+                    self.best = -np.Inf
+            else:
+                self.monitor_op = np.less
+                if self.best is None:
+                    self.best = np.Inf
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.epochs_since_last_save += 1
+
+        logs = logs or {}
+        # Block only when saving interval is reached.
+        from keras.utils import tf_utils
+        logs = tf_utils.sync_to_numpy_or_python_type(logs)
+        self.epochs_since_last_save = 0
+
+        current = logs.get(self.monitor)
+        if current is None:
+            logging.warning(
+                "Can save best model only with %s available, "
+                "skipping.",
+                self.monitor,
+            )
+        elif self.monitor_op(current, self.best):
+            self.best = current
+            self.full_model.save(self.folder)
+            with open("{}/{}.txt".format(self.folder, "epoch"), 'w') as efile:
+                efile.write(str(epoch))

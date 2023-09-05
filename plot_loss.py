@@ -62,9 +62,15 @@ def plot_loss():
         handles.extend(var_lines)
         ax.legend(handles=handles)
     else:
-        losses = np.load("{}/loss.npz".format(get_loss_path(args.outf+"/"+args.model_dir)))['arr_0']
+        loss_path = get_loss_path(args.outf+"/"+args.model_dir)
+        losses = np.load("{}/loss.npz".format(loss_path))['arr_0']
         ax.plot(losses[0], color=color_list[1], linestyle="solid", label="training")
         ax.plot(losses[1], color=color_list[2], linestyle="dashed", label="validation")
+        epoch_path = "{}/epoch.txt".format(loss_path)
+        if os.path.isfile(epoch_path):
+            with open(epoch_path,'r') as efile:
+                epoch = int(efile.read().rstrip().split()[0])
+                ax.plot([epoch],[losses[1][epoch]], color='black', marker='o', label="best")
         ax.legend()
 
     if args.yrange is not None:

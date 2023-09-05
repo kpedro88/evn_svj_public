@@ -91,6 +91,7 @@ def train():
     parser.add_argument("--continue-train", type=str, default="", help="folder path to load an existing network and continue training")
     parser.add_argument("--learning-rate", type=float, default=0.001, help="learning rate")
     parser.add_argument("--sampling", type=str, default=None, choices=sampling_choices, help="sampling to enforce balance in param values")
+    parser.add_argument("--best", default=False, action="store_true", help="save best model (rather than last model)")
     parser.add_argument("--preview", default=False, action="store_true", help="show model details w/o training or saving config")
     # workers?
     args = eparser.parse_args(checker=check_train_args, save=lambda x: not x.preview)
@@ -171,10 +172,19 @@ def train():
     # todo: make optimizer, loss configurable? or part of network choice
     optim = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
     model.network.compile(optimizer=optim, loss='binary_crossentropy')
-    history = model.network.fit(x=[params_train, inputs_train], y=ytarget_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.frac_validation)
+    cb_checkpoint = CompositeCheckpoint(
+        model=model,
+        folder=outf_models,
+        monitor="val_loss",
+    )
+    callbacks = []
+    if args.best:
+        callbacks.append(cb_checkpoint)
+    history = model.network.fit(x=[params_train, inputs_train], y=ytarget_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.frac_validation, callbacks=callbacks)
 
     # save trained model and extra info
-    model.save(outf_models)
+    if not args.best:
+        model.save(outf_models)
     np.savez("{}/shuffler_test.npz".format(outf_models), [shuffler_test])
     np.savez("{}/loss.npz".format(outf_models), [history.history['loss'],history.history['val_loss']])
 
